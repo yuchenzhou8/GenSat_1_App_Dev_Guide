@@ -18,7 +18,39 @@ This document is for engineers who are developing GENSAT-1 custom Applications f
 
 
 # 3. CFS Custom App Developmeent
+
 ## 3.1 Application Directory Tree
+
+The following shows the standard developement directory of each custom application
+```
+-- xx_app
+    |-- fsw
+    |   |-- mission_inc
+    |   |   |-- public/interface headers for the application
+    |   |-- platform_inc
+    |   |   |-- public/interface headers for the application
+    |   |-- src
+    |   |   |-- contains source files and private headers for the application
+    |   |-- table
+    |   |   |-- contains table defintions that will be registered in the initialization stage
+    |   |-- unit-test
+    |   |   |-- contains unit test for different functionalities of the application
+    |-- CmakeLists.txt
+    |   |-- contains a set of directive and instrutions describing the application's source files and target(executable, library, table)
+
+```
+| **Files**                             | **Descriptions**                                                                                             |
+|:--------------------------------------|:-------------------------------------------------------------------------------------------------------------|
+| fsw/src/xx_app.c                      | Main source code for xx_app. Located in src directory.                                                       |
+| fsw/src/xx_app.h                      | Main header file for xx_app. It contains your main global typedef, prototypes, and miscellaneous define.     |
+| fsw/src/xx_app_events.h               | Defines xx_app event IDs                                                                                     |
+| fsw/src/xx_app_msg.h                  | Defines xx_app commands and its structures                                                                   |
+| fsw/src/xx_app_version.h              | Defines xx-app verison numbers and development ids                                                           |
+| fsw/tables/xx_app_table.c             | Define xx_app table(s)                                                                                       |
+| fsw/platform_inc/xx_app_msgids.h      | Define xx_app message IDs                                                                                    |
+| fsw/mission_inc/xx_app_perfids.h      | Define xx_app performance IDs                                                                                |
+
+**Note**: Naming conventions does not have be followed perfectly. However, you should double-check the spelling whenever a file is referenced in a different location
 
 ## 3.2 Application Source Files
 
@@ -34,7 +66,11 @@ The version number is a sequence of four numbers, in order, the Major number, th
 
 #### 3.2.3.2 _Application Message and Info (xx_msg.h)_
 
+This header file contains the command and telemetry mesasge definitions, including command code (`__CC`) number assignments
+
 #### 3.2.3.3 _Application Events (xx_events.h)_
+
+This header file contains the Event ID(`__EID`) number assignments for events generated while the application is running. Event statements will be downlinked to the ground station, so be aware when you want to save a log while the cFS is running, making sure whether you want it to be saved locally on the satellite or tobe downlinked to the ground.
 
 #### 3.2.3.4 _Application Header (xx_app.h)_
 
