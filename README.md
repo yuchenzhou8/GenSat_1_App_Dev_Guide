@@ -36,6 +36,10 @@ The version number is a sequence of four numbers, in order, the Major number, th
 
 #### 3.2.3.3 _Application Events (xx_events.h)_
 
+#### 3.2.3.4 _Application Header (xx_app.h)_
+
+#### 3.2.3.5 _Application Main File (xx_app.c)_
+
 ### 3.2.4 Tables 
 
 ### 3.2.5 Unit-tests
@@ -52,7 +56,7 @@ Editing the CmakeList.txt allows the developer to cross-compile different applic
 
 After you edit your sources files and CmakeList.txt, one last thing before moving to make is editing the target and startup script.
 
-You have edit **target.cmake** and **cpu1-cfe_es_startup.scr** inside the **sample_def** directory (**sample_def** directory is located at cFS/cfe/cmake/**sample_def**, don’t change the files in the original location, instead copy the **sample_def** directory into cFS home directory)
+You have to edit **target.cmake** and **cpu1-cfe_es_startup.scr** inside the **sample_def** directory (**sample_def** directory is located at cFS/cfe/cmake/**sample_def**, don’t change the files in the original location, instead copy the **sample_def** directory into cFS home directory)
 
 ### 3.5.1 target.cmake
 
