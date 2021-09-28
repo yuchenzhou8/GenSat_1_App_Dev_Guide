@@ -60,7 +60,7 @@ The following shows the standard developement directory of each custom applicati
 
 #### 3.2.1.1 Application Performance IDs (xx_perfids.h)
 
-This header file contains the performance ids for application's software performance analysis. Performance Monitor IDs 0-31 are reserved by cFE. Performance ids should be unique for each application. Check all application's performance IDs before assigning a new performance id to a new application.
+This header file contains the performance IDs for application's software performance analysis. Performance Monitor IDs 0-31 are reserved by cFE. Performance IDs should be unique for each application. Check all application's performance IDs before assigning a new performance ID to a new application. A performance ID should be less than or equal to `CFE_MISSION_ES_PERF_MAX_IDS`
 
 ```
 
