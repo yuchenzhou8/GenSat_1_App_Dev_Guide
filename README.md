@@ -1,10 +1,34 @@
 # GENSAT_cFS_APP_Development_Guide
-
-Table of Contents
 -----------------
 
-    * [Table of Contents](#table-of-contents)
-    * [1. Inroduction](#1-introduction) 
+
+# Table of Contents
+
+- [Table of Contents](#table-of-contents)
+- [1. Introduction](#1-introduction)
+- [2. Reference Documentation](#2-reference-documentation)
+- [3. CFS Custom App Development](#3-cfs-custom-app-development)
+  - [3.1 Application Directory Tree](#31-application-directory-tree)
+  - [3.2 Application Source Files](#32-application-source-files)
+    - [3.2.1 Mission Inc](#321-mission-inc)
+      - [3.2.1.1 Application Performance IDs (xx_perfids.h)](#3211-application-performance-ids-xx_perfidsh)
+    - [3.2.2 Platform Inc](#322-platform-inc)
+      - [3.2.2.1 Message IDs](#3221-message-ids)
+      - [3.2.2.2 Specific Header Files Shared Across Different Applications](#3222-specific-header-files-shared-across-different-applications)
+    - [3.2.3 Src](#323-src)
+      - [3.2.3.1 _Version Number and Developments Build (xx_version.h)_](#3231-version-number-and-developments-build-xx_versionh)
+      - [3.2.3.2 _Application Message and Info (xx_msg.h)_](#3232-application-message-and-info-xx_msgh)
+      - [3.2.3.3 _Application Events (xx_events.h)_](#3233-application-events-xx_eventsh)
+      - [3.2.3.4 _Application Header (xx_app.h)_](#3234-application-header-xx_apph)
+      - [3.2.3.5 _Application Main File (xx_app.c)_](#3235-application-main-file-xx_appc)
+    - [3.2.4 Tables](#324-tables)
+    - [3.2.5 Unit-tests](#325-unit-tests)
+  - [3.3 Common Functions](#33-common-functions)
+  - [3.4 CmakeList.txt](#34-cmakelisttxt)
+  - [3.5 Startup Script && Target Files](#35-startup-script--target-files)
+    - [3.5.1 target.cmake](#351-targetcmake)
+    - [3.5.2 cpu1-cfe_es_start.scr](#352-cpu1-cfe_es_startscr)
+
 # 1. Introduction
 
 This document is for engineers who are developing GENSAT-1 custom Applications for EPS, ADCS, GadMag, Agile, etc. Before diving into the code, make sure understand the IOs of your payload, CCSDS package, and the basic knowledge of the cFS. This document is focusing on the app itself. If you are unsure about how to build an embedded Linux image for the dev board (Xilinx Zedboard) using Petalinux, or how to build the cFS executable that is compatible with the dev board environment, **please go to the Development Board tab under Wiki on Teams**. 
@@ -17,7 +41,7 @@ This document is for engineers who are developing GENSAT-1 custom Applications f
   * [OSAL User Guide](OSAL_Users_Guide.pdf)</br> (API for OSAL functions, useful for understanding functionality and IOs)
 
 
-# 3. CFS Custom App Developmeent
+# 3. CFS Custom App Development
 
 ## 3.1 Application Directory Tree
 
@@ -60,19 +84,68 @@ The following shows the standard developement directory of each custom applicati
 
 #### 3.2.1.1 Application Performance IDs (xx_perfids.h)
 
-This header file contains the performance IDs for application's software performance analysis. Performance Monitor IDs 0-31 are reserved by cFE. Performance IDs should be unique for each application. Check all application's performance IDs before assigning a new performance ID to a new application. A performance ID should be less than or equal to `CFE_MISSION_ES_PERF_MAX_IDS`
+This header file contains the performance IDs for application's software performance analysis. **Performance Monitor IDs 0-31 are reserved by cFE**. Performance IDs should be unique for each application. Check all application's performance IDs before assigning a new performance ID to a new application. A performance ID should be less than or equal to `CFE_MISSION_ES_PERF_MAX_IDS`. Please refer to [cFE Application Develop](https://github.com/nasa/cFE/blob/main/docs/cFE%20Application%20Developers%20Guide.md) section 5.13 **Software Performance Analysis**
 
 ```
 
 #define CFE_MISSION_ES_PERF_MAX_IDS 128
 
 ```
+**Example:**
+```
+
+#ifndef _gensat_ci_perfids_h_
+#define _gensat_ci_perfids_h_
+
+#define GENSAT_CI_MAIN_TASK_PERF_ID  32
+#define GENSAT_CI_SERIAL_RCV_PERF_ID 33
+
+#endif /* _gensat_ci_perfids_h_ */
+
+```
 
 ### 3.2.2 Platform Inc
 
+#### 3.2.2.1 Message IDs 
+
+This Header file contains the message IDs for each application. All message IDs should be unique across the entire cFS. Valid command/telemtry message IDs are restricted by following conditions:
+```
+
+#define CFE_PLATFORM_CMD_MID_BASE 0x1800
+Platform command message ID base offset.
+#define CFE_PLATFORM_TLM_MID_BASE 0x0800
+Platform telemetry message ID base offset.
+#define CFE_PLATFORM_CMD_MID_BASE_GLOB 0x1860
+"Global" command message ID base offset
+#define CFE_PLATFORM_SB_HIGHEST_VALID_MSGID 0x1FFF
+
+```
+
+**Note:** Some message IDs are already taken by cFE core applications and community applications written by NASA engineers, **please make sure the message IDs you select for a new application does not cause any conflicts with the existing ones.**
+
+To check whether a message ID is used or not, please refer to **App Status** file under **Avionics-Software Files/cFS_Information** on Teams.
+
+**Example:**
+```
+#ifndef _gensat_ci_msgids_h_
+#define _gensat_ci_msgids_h_
+
+#define GENSAT_CI_CMD_MID     0x1886
+#define GENSAT_CI_SEND_HK_MID 0x1887
+
+#define GENSAT_CI_HK_TLM_MID  0x0885
+
+#endif /* _gensat_ci_msgids_h_ */
+
+```
+
+#### 3.2.2.2 Specific Header Files Shared Across Different Applications
+
+You can include header files for specific applications based on needs.For instance, definitions for table entries or hardware configuration parameters.
+
 ### 3.2.3 Src
 
-The src directory contains the main source files and private header files for the application. Anything not shared across applications should theoritcally be stored in this directory
+The src directory contains the main source files and private header files for the application. Anything not shared across applications should theoritcally be stored in this directory.
 
 #### 3.2.3.1 _Version Number and Developments Build (xx_version.h)_
 
@@ -126,6 +199,8 @@ typedef struct
 
 ```
 A cFS CCSDS command/telemetry package is consisted of a primary header，a secondary header（structed differently for commands and telemetries), and a user data field(usually contains command arguments for command and data for telemtry). For the Noop command message, there is no argument, thus the message definition only includes the `CFE_SB_CMD_HDR`. Instead for the housekeeping telemetry message, it uses the user data field for the housekeeping information. Thus, in addition to the header `CFE_SB_TLM_HDR`, it contains the `GENSAT_CI_HkTlm_Payload_t` as a part of the telemtry message struct.
+
+**NOTE:** Each new payload application should probably have its own housekeeping struct, structured based on what events should be monitored.
 
 CMD/TLM header structures are shown to assist you to better understand the message package
 
@@ -212,6 +287,17 @@ typedef union {
 
 ```
 
+**Example of Command Code Assignments:**
+
+```
+
+FILE: gensat_ci_msg.h
+
+#define GENSAT_CI_NOOP_CC           0
+#define GENSAT_CI_RESET_COUNTERS_CC 1
+
+```
+
 #### 3.2.3.3 _Application Events (xx_events.h)_
 
 This header file contains the Event ID(`__EID`) number assignments for events generated while the application is running. Event statements will be downlinked to the ground station, so be aware when you want to save a log while the cFS is running, making sure whether you want it to be saved locally on the satellite or tobe downlinked to the ground.
@@ -234,13 +320,158 @@ This header file contains the Event ID(`__EID`) number assignments for events ge
 
 #### 3.2.3.4 _Application Header (xx_app.h)_
 
+This is the main header file for xx_app. It contains your main global struct of the application, function prototypes, header inclusions and miscellaneous definitions for the application
+
+```
+
+FILE: gensat_ci_app.h 
+
+#ifndef _gensat_ci_app_h_
+#define _gensat_ci_app_h_
+
+/*
+** Required header files...
+*/
+#include "common_types.h"
+#include "cfe_error.h"
+#include "cfe_evs.h"
+#include "cfe_sb.h"
+#include "cfe_es.h"
+
+#include "osapi.h"
+
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+
+#include "trans_uart.h"
+
+#include "gensat_ci_perfids.h"
+#include "gensat_ci_msgids.h"
+#include "gensat_ci_msg.h"
+#include "gensat_ci_events.h"
+#include "gensat_ci_version.h"
+#include "gensat_ci_platform_cfg.h"
+#include "gensat_io_lib.h"
+
+#include "gensat_to_msgids.h"
+#include "gensat_to_msg.h"
+
+/****************************************************************************/
+
+#define GENSAT_PACKAGE_MAX_SIZE 65536 + 6
+#define GENSAT_CI_MAX_LENGTH    65536
+#define GENSAT_CI_MAX_INGEST    GENSAT_PACKAGE_MAX_SIZE
+#define GENSAT_CI_PIPE_DEPTH    32
+
+#define GENSAT_CI_ERROR         -1
+#define GENSAT_CI_SUCCESS       0
+
+#define GENSAT_CI_PEND_FOREVER  -1
+
+/************************************************************************
+** Type Definitions
+*************************************************************************/
+
+/*
+ * Declaring the GENSAT_CI_IngestBuffer as a union
+ * ensures it is aligned appropriately to
+ * store a CFE_SB_Msg_t type.
+ */
+typedef union
+{
+    CFE_SB_Msg_t MsgHdr;
+    uint8        bytes[GENSAT_CI_MAX_INGEST];
+    uint16       hwords[2];
+} GENSAT_CI_IngestBuffer_t;
+
+typedef union
+{
+    CFE_SB_Msg_t   MsgHdr;
+    GENSAT_CI_HkTlm_t HkTlm;
+} GENSAT_CI_HkTlm_Buffer_t;
+
+typedef union
+{
+    CFE_SB_Msg_t   MsgHdr;
+    GENSAT_CI_EN_TO_t TO_ENABLE_Msg;
+} GENSAT_CI_ToEnableMsg_Buffer_t;
+
+typedef struct
+{
+    bool                            SerialConnected;
+    CFE_SB_PipeId_t                 CommandPipe;
+    CFE_SB_MsgPtr_t                 MsgPtr;
+    GENSAT_SERIAL_DEVICE            Device;
+
+
+    GENSAT_CI_HkTlm_Buffer_t        HkBuffer;
+    GENSAT_CI_IngestBuffer_t        IngestBuffer;
+    GENSAT_CI_ToEnableMsg_Buffer_t  ToEnableMsgBuffer;
+} GENSAT_CI_GlobalData_t;
+
+/****************************************************************************/
+/*
+** Local function prototypes...
+**
+** Note: Except for the entry point (GENSAT_CI_AppMain), these
+**       functions are not called from any other source module.
+*/
+void  GENSAT_CI_AppMain(void);
+void  GENSAT_CI_TaskInit(void);
+void  GENSAT_CI_ProcessCommandPacket(void);
+void  GENSAT_CI_ProcessGroundCommand(void);
+void  GENSAT_CI_ResetCounters_Internal(void);
+void  GENSAT_CI_ReadUpLink(void);
+void  GENSAT_CI_ENABLE_TLM_OUTPUT(void);
+
+int32 GENSAT_CI_CustomInit(void);
+int32 GENSAT_CI_Read(int32 fd, const void* buffer, int32 numBytes, int32 timout_us);
+void  GENSAT_CI_CustomProcessUpMsg(CFE_SB_MsgPtr_t pSbMsg, CFE_SB_MsgId_t msgId);
+int32 GENSAT_CI_Close_Port(int32 fd);
+
+bool  GENSAT_CI_VerifyCmdLength(CFE_SB_MsgPtr_t msg, uint16 ExpectedLength);
+
+#endif /* _ci_lab_app_h_ */
+
+```
+
 #### 3.2.3.5 _Application Main File (xx_app.c)_
+
+This is the main source file of the application, which usually contains the main function (usually **xx_AppMain**), application initialization function, command message process function, individual command handler, and special function for the application.
+
+* **Application Main Function**
+sss
+* **Application Initalization Function**
+* **Command Message Process Function**
+* **Individual Command Handler**
+These functions will only be executed when an application command is received. They will be called by the command message process function after validation.</br>
+**Example:**
+``int32 GENSAT_CI_Noop(const GENSAT_CI_Noop_t *data);``
+``int32 GENSAT_CI_ResetCounters(const GENSAT_CI_ResetCounters_t *data);``
+</br>
+* **Housekeeping Telemtry Function**
+This function sends a telemtry message that contains the housekeeping information to the software bus. Then, the software bus will put the message into the telemtry output application for downlinking.</br>
+**Example:**
+``int32 GENSAT_CI_ReportHousekeeping(const CFE_SB_CmdHdr_t *data);``
+</br>
+
+* **Special Functions**
+Depending on what application you try to develop, each application has a number of designated functions.</br>
+**Example:**
+``/* Waiting for command from the ground station with a timeout */``
+**``GENSAT_CI_ReadUpLink()``**
+Because command ingest is waiting for the sat radio to transmit
+ground station package, `GENSAT_CI_ReadUpLink()` is designed.
+``/* Enable Telemetry Output */``
+**``GENSAT_CI_ENABLE_TLM_OUTPUT()``**
+Once the command ingest application is initialized, it will send a command message to the telemetry out application, telling it that the UART port is ready to use. The port information is sent inside the message.
 
 ### 3.2.4 Tables 
 
 ### 3.2.5 Unit-tests
 
-Don't worry about them for now
+Don't worry about the unit-tests for now
 
 ## 3.3 Common Functions
 
