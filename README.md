@@ -440,31 +440,31 @@ bool  GENSAT_CI_VerifyCmdLength(CFE_SB_MsgPtr_t msg, uint16 ExpectedLength);
 
 This is the main source file of the application, which usually contains the main function (usually **xx_AppMain**), application initialization function, command message process function, individual command handler, and special function for the application.
 
-* **Application Main Function**
+* **Application Main Function**</br>
 sss
-* **Application Initalization Function**
-* **Command Message Process Function**
-* **Individual Command Handler**
+* **Application Initalization Function**</br>
+* **Command Message Process Function**</br>
+* **Individual Command Handler**</br>
 These functions will only be executed when an application command is received. They will be called by the command message process function after validation.</br>
-**Example:**
-``int32 GENSAT_CI_Noop(const GENSAT_CI_Noop_t *data);``
-``int32 GENSAT_CI_ResetCounters(const GENSAT_CI_ResetCounters_t *data);``
-</br>
-* **Housekeeping Telemtry Function**
-This function sends a telemtry message that contains the housekeeping information to the software bus. Then, the software bus will put the message into the telemtry output application for downlinking.</br>
-**Example:**
-``int32 GENSAT_CI_ReportHousekeeping(const CFE_SB_CmdHdr_t *data);``
-</br>
+**Example:**</br>
+**``int32 GENSAT_CI_Noop(const GENSAT_CI_Noop_t *data);``**</br>
+**``int32 GENSAT_CI_ResetCounters(const GENSAT_CI_ResetCounters_t *data);``**
 
-* **Special Functions**
+* **Housekeeping Telemtry Function**</br>
+This function sends a telemtry message that contains the housekeeping information to the software bus. Then, the software bus will put the message into the telemtry output application for downlinking.</br>
+**Example:**</br>
+**``int32 GENSAT_CI_ReportHousekeeping(const CFE_SB_CmdHdr_t *data);``**
+
+
+* **Special Functions**</br>
 Depending on what application you try to develop, each application has a number of designated functions.</br>
-**Example:**
-``/* Waiting for command from the ground station with a timeout */``
-**``GENSAT_CI_ReadUpLink()``**
+**Example:**</br>
+``/* Waiting for command from the ground station with a timeout */``</br>
+**``GENSAT_CI_ReadUpLink()``**</br>
 Because command ingest is waiting for the sat radio to transmit
-ground station package, `GENSAT_CI_ReadUpLink()` is designed.
-``/* Enable Telemetry Output */``
-**``GENSAT_CI_ENABLE_TLM_OUTPUT()``**
+ground station package, `GENSAT_CI_ReadUpLink()` is designed.</br>
+``/* Enable Telemetry Output */``</br>
+**``GENSAT_CI_ENABLE_TLM_OUTPUT()``**</br>
 Once the command ingest application is initialized, it will send a command message to the telemetry out application, telling it that the UART port is ready to use. The port information is sent inside the message.
 
 ### 3.2.4 Tables 
