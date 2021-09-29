@@ -13,7 +13,7 @@
     - [3.2.1 Mission Inc](#321-mission-inc)
       - [3.2.1.1 Application Performance IDs (xx_perfids.h)](#3211-application-performance-ids-xx_perfidsh)
     - [3.2.2 Platform Inc](#322-platform-inc)
-      - [3.2.2.1 Message IDs](#3221-message-ids)
+      - [3.2.2.1 Message IDs (xx_msgids.h)](#3221-message-ids-xx_msgidsh)
       - [3.2.2.2 Specific Header Files Shared Across Different Applications](#3222-specific-header-files-shared-across-different-applications)
     - [3.2.3 Src](#323-src)
       - [3.2.3.1 _Version Number and Developments Build (xx_version.h)_](#3231-version-number-and-developments-build-xx_versionh)
@@ -106,7 +106,7 @@ This header file contains the performance IDs for application's software perform
 
 ### 3.2.2 Platform Inc
 
-#### 3.2.2.1 Message IDs 
+#### 3.2.2.1 Message IDs (xx_msgids.h)
 
 This Header file contains the message IDs for each application. All message IDs should be unique across the entire cFS. Valid command/telemtry message IDs are restricted by following conditions:
 ```
