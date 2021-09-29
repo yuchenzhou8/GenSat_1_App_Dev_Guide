@@ -23,11 +23,10 @@
       - [3.2.3.5 _Application Main File (xx_app.c)_](#3235-application-main-file-xx_appc)
     - [3.2.4 Tables](#324-tables)
     - [3.2.5 Unit-tests](#325-unit-tests)
-  - [3.3 Common Functions](#33-common-functions)
-  - [3.4 CmakeList.txt](#34-cmakelisttxt)
-  - [3.5 Startup Script && Target Files](#35-startup-script--target-files)
-    - [3.5.1 target.cmake](#351-targetcmake)
-    - [3.5.2 cpu1-cfe_es_start.scr](#352-cpu1-cfe_es_startscr)
+  - [3.3 CmakeList.txt](#33-cmakelisttxt)
+  - [3.4 Startup Script && Target Files](#34-startup-script--target-files)
+    - [3.4.1 target.cmake](#341-targetcmake)
+    - [3.4.2 cpu1-cfe_es_start.scr](#342-cpu1-cfe_es_startscr)
 
 # 1. Introduction
 
@@ -441,20 +440,209 @@ bool  GENSAT_CI_VerifyCmdLength(CFE_SB_MsgPtr_t msg, uint16 ExpectedLength);
 This is the main source file of the application, which usually contains the main function (usually **xx_AppMain**), application initialization function, command message process function, individual command handler, and special function for the application.
 
 * **Application Main Function**</br>
-sss
+This is the core function of each application (also the entry point of each application). It registers the application, initializes all necessary software and hardware tools, and eventually enters the running mode.
+  1. **Task Initialization**
+      * App Registration
+      * Event Registration
+      * Create Message Pipeline
+      * Software Bus Subscrbe
+      * Delete Handler 
+      * Specific 
+        * Hardware Initialization (Serial Device, GPIO, TIMER, etc.)
+        * Register and Load Table 
+  2. **Running Mode**
+   This is a self-looping cycle that runs forever until termination. The running task  depends on the application.
+    **Example:**
+
+        ```
+
+        /*
+        ** CI Runloop
+        */
+        while (CFE_ES_RunLoop(&RunStatus) == true)
+        {
+            CFE_ES_PerfLogExit(GENSAT_CI_MAIN_TASK_PERF_ID);
+
+            /* Pend on receipt of command packet -- timeout set to 500 millisecs */
+            status = CFE_SB_RcvMsg(&GENSAT_CI_Global.MsgPtr, GENSAT_CI_Global.CommandPipe, 500);
+
+            CFE_ES_PerfLogEntry(GENSAT_CI_MAIN_TASK_PERF_ID);
+
+            if (status == CFE_SUCCESS)
+            {
+                GENSAT_CI_ProcessCommandPacket();
+            }
+
+            // Regardless of packet vs timeout, always process uplink queue
+            if (GENSAT_CI_Global.SerialConnected == true)
+            {
+                GENSAT_CI_ReadUpLink();
+            }
+        }
+
+        ```
+  3. **Close**
+   ``CFE_ES_ExitApp(RunStatus);``
+   </br>
+
 * **Application Initalization Function**</br>
+  *  **Application Registration**
+  ``CFE_ES_RegisterApp()``
+     </br>
+  *  **Event Registration**
+  Applications must be registered with the event service to downlink event telemtries to the ground station, otherwise an error telemetry will be downlinked to indicate that the application is not registered with event service.
+
+        **Example:**
+        ```
+        
+        static CFE_EVS_BinFilter_t GENSAT_CI_EventFilters[] =
+        {/* Event ID    mask */
+        {GENSAT_CI_INF_EID, 0x0000}, 
+        {GENSAT_CI_STARTUP_INF_EID, 0x0000}, 
+        {GENSAT_CI_COMMANDNOP_INF_EID, 0x0000},
+        {GENSAT_CI_COMMANDRST_INF_EID, 0x0000},      
+        {GENSAT_CI_INGEST_INF_EID, 0x0000}, 
+        {GENSAT_CI_ERR_EID, 0x0000},
+        {GENSAT_CI_SERIALCREATE_ERR_EID, 0x0000},       
+        {GENSAT_CI_COMMAND_ERR_EID, 0x0000}, 
+        {GENSAT_CI_INGEST_ERR_EID, 0x0000},
+        {GENSAT_CI_LEN_ERR_EID, 0x0000}};
+
+        CFE_EVS_Register(GENSAT_CI_EventFilters, sizeof(GENSAT_CI_EventFilters) / sizeof(CFE_EVS_BinFilter_t), CFE_EVS_EventFilter_BINARY);
+
+        ```
+
+  *  **Create Pipeline for Software Bus Message**
+  Applications need to create pipelines to hold received Software Bus Message before they being processed.
+        ```
+
+        CFE_SB_CreatePipe(&GENSAT_CI_Global.CommandPipe, GENSAT_CI_PIPE_DEPTH, "GENSAT_CI_CMD_PIPE"); 
+
+        ```
+  
+  *  **Subscribe Message ID for each Pipeline**
+  Because we don't want keep messages of other unrelevant applications, we must subscribe message IDs to their designated pipelines. You can set a limit for the number of messages that a pipeline can hold simultaneously
+**Example:**
+        ```
+
+        CFE_SB_Subscribe(GENSAT_CI_CMD_MID, GENSAT_CI_Global.CommandPipe);
+        CFE_SB_Subscribe(GENSAT_CI_SEND_HK_MID, GENSAT_CI_Global.CommandPipe);
+            
+        ```  
+  *  **Specific**
+  Different applications have their own needs. Some payload applications need to establish the serial communnication with the hardware they are managing, and some applications use the table services to load information for initialization. This guide is not going to explain how to access hardware. You have to have a software/hardware driver that is capable of accessing the embedded hardwares, then reference those driver functions in your main application. For tables, you have to first register, then load, then get the table entry point, and eventually use information from it in your application. More explainations will be in the Tables section.
+  </br>
 * **Command Message Process Function**</br>
+The Command Message Process Function is called when a application command message (for instance, `GENSAT_CI_CMD_MID`) is received from the Software Bus. Following steps will be executed after a message is received from the SB:
+  1. Get the message ID CMD/TLM
+  2. If a application command is received, get the command code
+  3. call the corresponding command handler
+
+    **Example:**
+  1. **Step 0 Receiving Message from the Software Bus**
+   
+    ```
+
+    CFE_ES_PerfLogExit(GENSAT_CI_MAIN_TASK_PERF_ID);
+
+    /* Pend on receipt of command packet -- timeout set to 500 millisecs */
+    status = CFE_SB_RcvMsg(&GENSAT_CI_Global.MsgPtr, GENSAT_CI_Global.CommandPipe, 500);
+
+    CFE_ES_PerfLogEntry(GENSAT_CI_MAIN_TASK_PERF_ID);
+
+    if (status == CFE_SUCCESS)
+    {
+        GENSAT_CI_ProcessCommandPacket();
+    }
+
+    ```
+  2. **Step 1 Get the message ID**
+
+    ```
+
+    void GENSAT_CI_ProcessCommandPacket(void)
+    {
+        CFE_SB_MsgId_t MsgId;
+        MsgId = **CFE_SB_GetMsgId(GENSAT_CI_Global.MsgPtr);**
+
+        switch (CFE_SB_MsgIdToValue(MsgId))
+        {
+            case GENSAT_CI_CMD_MID:
+                GENSAT_CI_ProcessGroundCommand();
+                break;
+
+            case GENSAT_CI_SEND_HK_MID:
+                GENSAT_CI_ReportHousekeeping((const CFE_SB_CmdHdr_t *)GENSAT_CI_Global.MsgPtr);
+                break;
+
+            default:
+                GENSAT_CI_Global.HkBuffer.HkTlm.Payload.CommandErrorCounter++;
+                break;
+        }
+
+        return;
+
+    } /* End GENSAT_CI_ProcessCommandPacket */
+
+    ```
+  3. **Step 2 Get the Command Code**
+
+    ```
+
+    void GENSAT_CI_ProcessGroundCommand(void)
+    {
+        uint16 CommandCode;
+
+        CommandCode = **CFE_SB_GetCmdCode(GENSAT_CI_Global.MsgPtr)**;
+
+        /* Process "known" CI task ground commands */
+        switch (CommandCode)
+        {
+            case GENSAT_CI_NOOP_CC:
+                GENSAT_CI_Noop((const GENSAT_CI_Noop_t *)GENSAT_CI_Global.MsgPtr);
+                break;
+
+            case GENSAT_CI_RESET_COUNTERS_CC:
+                GENSAT_CI_ResetCounters((const GENSAT_CI_ResetCounters_t *)GENSAT_CI_Global.MsgPtr);
+                break;
+
+            /* default case already found during FC vs length test */
+            default:
+                break;
+        }
+
+        return;
+
+    } /* End of GENSAT_CI_ProcessGroundCommand() */
+
+    ```
+  4. **Step 3 Execute Command Handler**
+
+    ```
+
+    int32 GENSAT_CI_Noop(const GENSAT_CI_Noop_t *data)
+    {
+        /* Does everything the name implies */
+        GENSAT_CI_Global.HkBuffer.HkTlm.Payload.CommandCounter++;
+
+        CFE_EVS_SendEvent(GENSAT_CI_COMMANDNOP_INF_EID, CFE_EVS_EventType_INFORMATION, "CI: NOOP command");
+
+        return CFE_SUCCESS;
+    }
+
+    ```
+
 * **Individual Command Handler**</br>
 These functions will only be executed when an application command is received. They will be called by the command message process function after validation.</br>
 **Example:**</br>
 **``int32 GENSAT_CI_Noop(const GENSAT_CI_Noop_t *data);``**</br>
 **``int32 GENSAT_CI_ResetCounters(const GENSAT_CI_ResetCounters_t *data);``**
-
+</br>
 * **Housekeeping Telemtry Function**</br>
 This function sends a telemtry message that contains the housekeeping information to the software bus. Then, the software bus will put the message into the telemtry output application for downlinking.</br>
 **Example:**</br>
 **``int32 GENSAT_CI_ReportHousekeeping(const CFE_SB_CmdHdr_t *data);``**
-
+</br>
 
 * **Special Functions**</br>
 Depending on what application you try to develop, each application has a number of designated functions.</br>
@@ -467,25 +655,31 @@ ground station package, `GENSAT_CI_ReadUpLink()` is designed.</br>
 **``GENSAT_CI_ENABLE_TLM_OUTPUT()``**</br>
 Once the command ingest application is initialized, it will send a command message to the telemetry out application, telling it that the UART port is ready to use. The port information is sent inside the message.
 
-### 3.2.4 Tables 
+### 3.2.4 Tables
+A table is a related set of data values (equivalent to a C structure or array) that can be loaded and dumped as a single unit by the ground. Tables are used in the flight code to give ground operators the ability to update constants used by the flight software during normal spacecraft operation without the need for patching the software. Some tables are also used for dumping infrequently needed status information to the ground on command.
+
+A Table is considered a shared memory resource. An Application requests the creation of the shared memory from the cFE and the Application must routinely request access and subsequently release access to the Table. In this way, Table Services is able to manage the sharing of tables and perform updates/modifications without the Application being involved. Developers no longer need to develop code to update their Tables. The ground-flight interface for modifying Tables is consistent across all Applications and any change in the interface will only require a change to the cFE Table Services rather than modifying each Application. (from [cFE User Guide](cFE_Users_Guide.pdf) Section 8 Table)
+
+[cFE User Guide](cFE_Users_Guide.pdf) Section 8 Table contains a very detailed documentation about how to use the table service with sample code attached.
 
 ### 3.2.5 Unit-tests
 
 Don't worry about the unit-tests for now
 
-## 3.3 Common Functions
+[comment]: <> (## 3.3 Common Functions
+Here is a list of functions that you are probably going to use. For more detailed explaination, please dive into the code and refer to [cFE User Guide](cFE_Users_Guide.pdf))
 
-## 3.4 CmakeList.txt
+## 3.3 CmakeList.txt
 
 Editing the CmakeList.txt allows the developer to cross-compile different applications together. Using the **sample_app**’s Cmakelist.txt as a reference for now
 
-## 3.5 Startup Script && Target Files
+## 3.4 Startup Script && Target Files
 
 After you edit your sources files and CmakeList.txt, one last thing before moving to make is editing the target and startup script.
 
 You have to edit **target.cmake** and **cpu1-cfe_es_startup.scr** inside the **sample_def** directory (**sample_def** directory is located at cFS/cfe/cmake/**sample_def**, don’t change the files in the original location, instead copy the **sample_def** directory into cFS home directory)
 
-### 3.5.1 target.cmake
+### 3.4.1 target.cmake
 
 The **target.cmake** is used for the compiler to search for the corresponding app source folder (an error will be reported if the folder is missing)
 
@@ -521,7 +715,7 @@ For example, to include **gensat_ci** and **gensat_to** applications, the list w
 
 ```list(APPEND MISSION_GLOBAL_APPLIST sample_app sample_lib gensat_ci gensat_to gensat_io_lib)```
 
-### 3.5.2 cpu1-cfe_es_start.scr
+### 3.4.2 cpu1-cfe_es_start.scr
 
 The **cpu1-cfe_es_startup.scr** is the startup file parsed by the cFE core service when you run the cFS executable. The startup script is a text file, written by the user that contains a list of entries (one entry for each application) and is used by the ES application for automating the startup of applications. (runtime errors will be reported if the parsing process encounters error) please refer to [cFE User Guide](cFE_Users_Guide.pdf) section 9.1.3 **"Startup Script"**. 
 
