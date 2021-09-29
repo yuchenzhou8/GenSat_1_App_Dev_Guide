@@ -482,7 +482,11 @@ This is the core function of each application (also the entry point of each appl
 
         ```
   3. **Close**
-   ``CFE_ES_ExitApp(RunStatus);``
+     ```
+
+     CFE_ES_ExitApp(RunStatus);
+
+     ```
    </br>
 
 * **Application Initalization Function**</br>
@@ -635,9 +639,13 @@ The Command Message Process Function is called when a application command messag
 * **Individual Command Handler**</br>
 These functions will only be executed when an application command is received. They will be called by the command message process function after validation.</br>
 **Example:**</br>
-**``int32 GENSAT_CI_Noop(const GENSAT_CI_Noop_t *data);``**</br>
-**``int32 GENSAT_CI_ResetCounters(const GENSAT_CI_ResetCounters_t *data);``**
-</br>
+  ```
+  
+  int32 GENSAT_CI_Noop(const GENSAT_CI_Noop_t *data);
+  
+  int32 GENSAT_CI_ResetCounters(const GENSAT_CI_ResetCounters_t *data);
+  
+  ```
 * **Housekeeping Telemtry Function**</br>
 This function sends a telemtry message that contains the housekeeping information to the software bus. Then, the software bus will put the message into the telemtry output application for downlinking.</br>
 **Example:**</br>
@@ -665,9 +673,6 @@ A Table is considered a shared memory resource. An Application requests the crea
 ### 3.2.5 Unit-tests
 
 Don't worry about the unit-tests for now
-
-[comment]: <> (## 3.3 Common Functions
-Here is a list of functions that you are probably going to use. For more detailed explaination, please dive into the code and refer to [cFE User Guide](cFE_Users_Guide.pdf))
 
 ## 3.3 CmakeList.txt
 
